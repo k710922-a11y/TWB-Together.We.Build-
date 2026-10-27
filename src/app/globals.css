@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+  --color-brand: #5b5bf0;
+  --color-brand-600: #4b4be0;
+  --color-brand-50: #eef0ff;
+  --color-ink: #1f2440;
+  --color-sub: #6b7088;
+  --color-faint: #9aa0b4;
+  --color-line: #e7e9f2;
+  --color-canvas: #f6f7fb;
+  --color-st-todo: #8b90a3;
+  --color-st-todo-bg: #eceef3;
+  --color-st-prog: #2f80ed;
+  --color-st-prog-bg: #dcebfd;
+  --color-st-review: #e8891c;
+  --color-st-review-bg: #fde9d3;
+  --color-st-done: #00b26b;
+  --color-st-done-bg: #d6f5e7;
+  --color-pri-high: #e2445c;
+  --color-pri-mid: #f0a020;
+  --color-pri-low: #8b90a3;
+}
+
+html, body { background: #fff; color: var(--color-ink); }
+body { font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+/* 공통 요소 */
+@utility card { @apply rounded-xl border border-line bg-white; }
+@utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 h-9 text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer; }
+@utility btn-primary { @apply btn bg-brand text-white hover:bg-brand-600; }
+@utility btn-ghost { @apply btn border border-line bg-white text-ink hover:bg-canvas; }
+@utility btn-danger { @apply btn border border-[#f5c2cb] bg-white text-pri-high hover:bg-[#fff1f3]; }
+@utility btn-sm { @apply h-7 px-2.5 text-[12px] rounded-md; }
+@utility input { @apply w-full rounded-lg border border-line bg-white px-3 h-9 text-[13px] outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 placeholder:text-faint; }
+@utility textarea { @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-[13px] outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 placeholder:text-faint resize-y; }
+@utility label { @apply block text-[12px] font-semibold text-sub mb-1; }
+@utility pill { @apply inline-flex items-center rounded-full px-2.5 h-6 text-[12px] font-semibold whitespace-nowrap; }
+@utility muted { @apply text-sub; }
+@utility cell-input { @apply w-full bg-transparent outline-none rounded px-1 -mx-1 focus:bg-white focus:ring-2 focus:ring-brand/20; }
+
+/* 마크다운 (위키) */
+.prose-twb h1 { @apply text-xl font-bold mt-5 mb-2; }
+.prose-twb h2 { @apply text-lg font-bold mt-5 mb-2; }
+.prose-twb h3 { @apply text-base font-bold mt-4 mb-1.5; }
+.prose-twb p { @apply my-2 leading-relaxed; }
+.prose-twb ul { @apply list-disc pl-5 my-2; }
+.prose-twb ol { @apply list-decimal pl-5 my-2; }
+.prose-twb li { @apply my-0.5; }
+.prose-twb code { @apply bg-canvas rounded px-1 py-0.5 text-[12.5px]; }
+.prose-twb pre { @apply bg-[#1f2440] text-white rounded-lg p-3 my-3 overflow-x-auto; }
+.prose-twb pre code { @apply bg-transparent p-0 text-white; }
+.prose-twb a { @apply text-brand underline; }
+.prose-twb table { @apply my-3 border-collapse text-[13px]; }
+.prose-twb th, .prose-twb td { @apply border border-line px-2 py-1; }
+.prose-twb th { @apply bg-canvas; }
+.prose-twb blockquote { @apply border-l-4 border-line pl-3 text-sub my-2; }

@@ -1,0 +1,42 @@
+{
+  "name": "twb",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TWB(Together.We.Build) — 10인 이내 팀을 위한 셀프호스팅 비동기 협업툴",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "node scripts/migrate.mjs && next start -p ${PORT:-3000}",
+    "migrate": "node scripts/migrate.mjs",
+    "db:generate": "drizzle-kit generate",
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.4.17",
+    "drizzle-orm": "^0.45.4",
+    "lucide-react": "^1.61.0",
+    "marked": "^18.1.2",
+    "next": "^16.4.3",
+    "postgres": "^3.4.9",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.11",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}
