@@ -71,6 +71,8 @@ export default async function ProjectPage({ params, searchParams }: {
     const q = new URLSearchParams();
     q.set("tab", k);
     for (const [kk, v] of Object.entries(filters)) if (v) q.set(kk, v);
+    if (sp.tableView === "subtitle") q.set("tableView", "subtitle");
+    if (sp.subtitle) q.set("subtitle", sp.subtitle);
     return `/projects/${id}?${q.toString()}`;
   };
   const activeUsers = users.filter((u) => u.active);
