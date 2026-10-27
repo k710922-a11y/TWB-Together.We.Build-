@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { TaskRow } from "@/lib/queries";
 import { Empty } from "@/components/ui";
@@ -9,7 +9,7 @@ import { useOpenTask } from "./cells";
 
 const ROW = 46;
 const HEAD = 36;
-const LABEL_W = 240;
+const MIN_LABEL_W = 240;
 
 /** 월요일로 내림 */
 function weekStart(s: string) {
@@ -22,6 +22,11 @@ export function Gantt({ tasks, deps, milestones }: {
   tasks: TaskRow[]; deps: { taskId: string; dependsOnId: string }[]; milestones: { title: string; date: string }[];
 }) {
   const [scale, setScale] = useState<"week" | "day">("week");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const labelsRef = useRef<HTMLDivElement>(null);
+  const [labelWidth, setLabelWidth] = useState(360);
+  const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
   const openTask = useOpenTask();
   const today = todayStr();
 
@@ -34,6 +39,35 @@ export function Gantt({ tasks, deps, milestones }: {
       return { t, start, end };
     }), [tasks]);
   const undated = tasks.filter((t) => !t.startDate && !t.dueDate);
+
+  // 제목은 화면 폭에 맞춰 자동으로 넓히고, 줄바꿈된 실제 행 높이를 타임라인에도 적용한다.
+  useEffect(() => {
+    const container = containerRef.current;
+    const labels = labelsRef.current;
+    const measure = measureRef.current;
+    if (!container || !labels || !measure) return;
+    let disposed = false;
+    const sync = () => {
+      if (disposed) return;
+      const natural = Math.ceil(Math.max(208, ...Array.from(measure.children).map((el) => el.getBoundingClientRect().width))) + 32;
+      setLabelWidth(Math.max(MIN_LABEL_W, Math.min(natural, 640, Math.floor(container.clientWidth * 0.55))));
+      const next = Object.fromEntries(Array.from(labels.querySelectorAll<HTMLButtonElement>("button[data-task-id]"))
+        .map((el) => [el.dataset.taskId!, el.getBoundingClientRect().height]));
+      setRowHeights((prev) => Object.keys(prev).length === Object.keys(next).length && Object.entries(next).every(([id, h]) => prev[id] === h) ? prev : next);
+    };
+    const observer = new ResizeObserver(sync);
+    observer.observe(container);
+    Array.from(labels.children).forEach((el) => observer.observe(el));
+    sync();
+    void document.fonts.ready.then(sync);
+    return () => { disposed = true; observer.disconnect(); };
+  }, [bars]);
+
+  const rows = bars.map(({ t }) => ({ height: rowHeights[t.id] ?? ROW }));
+  const offsets: number[] = [];
+  let totalRowsHeight = 0;
+  for (const row of rows) { offsets.push(totalRowsHeight); totalRowsHeight += row.height; }
+  const rowCenter = (i: number) => HEAD + offsets[i] + rows[i].height / 2;
 
   if (!bars.length) {
     return (
@@ -62,20 +96,23 @@ export function Gantt({ tasks, deps, milestones }: {
   return (
     <section>
       <GanttHead scale={scale} setScale={setScale} range={`${fmtShort(min)} – ${fmtShort(max)} · ${scale === "week" ? "주" : "일"} 단위`} />
-      <div className="card overflow-hidden">
-        <div className="flex">
+      <div ref={containerRef} className="card relative overflow-x-auto">
+        <div ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 flex w-max flex-col items-start text-[13.5px] font-medium leading-5">
+          {bars.map(({ t }) => <span key={t.id} className="whitespace-pre">{t.title}</span>)}
+        </div>
+        <div className="flex" style={{ minWidth: labelWidth + 240 }}>
           {/* 왼쪽 태스크 이름 */}
-          <div className="shrink-0 border-r border-line bg-white" style={{ width: LABEL_W }}>
+          <div ref={labelsRef} className="shrink-0 border-r border-line bg-white" style={{ width: labelWidth }}>
             <div className="flex items-center border-b border-line bg-canvas px-4 text-[12px] text-sub" style={{ height: HEAD }}>태스크</div>
             {bars.map(({ t }) => (
-              <button key={t.id} onClick={() => openTask(t.id)} className="flex w-full items-center border-b border-line px-4 text-left text-[13.5px] font-medium hover:bg-canvas" style={{ height: ROW }}>
-                <span className="truncate">{t.title}</span>
+              <button key={t.id} data-task-id={t.id} onClick={() => openTask(t.id)} title={t.title} className="flex w-full items-center border-b border-line px-4 py-3 text-left text-[13.5px] font-medium leading-5 hover:bg-canvas" style={{ minHeight: ROW }}>
+                <span className="min-w-0 whitespace-normal break-words [overflow-wrap:anywhere]">{t.title}</span>
               </button>
             ))}
           </div>
           {/* 오른쪽 타임라인 */}
           <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="relative" style={{ width, height: HEAD + bars.length * ROW }}>
+            <div className="relative" style={{ width, height: HEAD + totalRowsHeight }}>
               {/* 헤더 */}
               <div className="absolute inset-x-0 top-0 flex border-b border-line bg-canvas" style={{ height: HEAD }}>
                 {scale === "week"
@@ -87,7 +124,7 @@ export function Gantt({ tasks, deps, milestones }: {
               </div>
               {/* 세로 구분선 + 행 */}
               {weeks.map((w) => <div key={w} className="absolute bottom-0 border-l border-line" style={{ left: x(w), top: HEAD }} />)}
-              {bars.map((_, i) => <div key={i} className="absolute inset-x-0 border-b border-line" style={{ top: HEAD + (i + 1) * ROW - 1 }} />)}
+              {bars.map((_, i) => <div key={i} className="absolute inset-x-0 border-b border-line" style={{ top: HEAD + offsets[i] + rows[i].height - 1 }} />)}
               {/* 오늘 */}
               <div className="absolute bottom-0 w-px bg-pri-high/60" style={{ left: x(today) + px / 2, top: HEAD - 6 }}>
                 <span className="absolute -top-0 left-1 whitespace-nowrap rounded bg-pri-high px-1 text-[10px] text-white">오늘</span>
@@ -105,18 +142,18 @@ export function Gantt({ tasks, deps, milestones }: {
                 return (
                   <button key={t.id} onClick={() => openTask(t.id)} title={`${t.title} (${fmtShort(start)}~${fmtShort(end)})`}
                     className="absolute overflow-hidden rounded-md transition-opacity hover:opacity-85"
-                    style={{ left, width: w, top: HEAD + i * ROW + 12, height: ROW - 24, background: t.status === "in_progress" ? "#cfe3fd" : st.bar }}>
+                    style={{ left, width: w, top: rowCenter(i) - 11, height: 22, background: t.status === "in_progress" ? "#cfe3fd" : st.bar }}>
                     {t.status === "in_progress" && <span className="absolute inset-y-0 left-0" style={{ width: `${p * 100}%`, background: st.bar }} />}
                   </button>
                 );
               })}
               {/* 의존 관계 화살표 */}
-              <svg className="pointer-events-none absolute inset-0" width={width} height={HEAD + bars.length * ROW}>
+              <svg className="pointer-events-none absolute inset-0" width={width} height={HEAD + totalRowsHeight}>
                 <defs><marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#8b90a3" /></marker></defs>
                 {depLines.map((d) => {
                   const a = bars[rowOf.get(d.dependsOnId)!], b = bars[rowOf.get(d.taskId)!];
-                  const x1 = x(a.end) + px, y1 = HEAD + rowOf.get(d.dependsOnId)! * ROW + ROW / 2;
-                  const x2 = x(b.start), y2 = HEAD + rowOf.get(d.taskId)! * ROW + ROW / 2;
+                  const x1 = x(a.end) + px, y1 = rowCenter(rowOf.get(d.dependsOnId)!);
+                  const x2 = x(b.start), y2 = rowCenter(rowOf.get(d.taskId)!);
                   const mid = Math.max(x1 + 8, Math.min(x2 - 8, x1 + 14));
                   const bad = b.start <= a.end; // 선행 태스크가 끝나기 전에 시작 → 빨간색
                   return <path key={d.taskId + d.dependsOnId} d={`M${x1},${y1} H${mid} V${y2} H${x2}`} fill="none" stroke={bad ? "#e2445c" : "#8b90a3"} strokeWidth="1.4" markerEnd="url(#arr)" />;
