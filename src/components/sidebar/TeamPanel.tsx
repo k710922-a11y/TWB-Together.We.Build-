@@ -62,7 +62,7 @@ export function TeamPanel({ me, users, invites, maxMembers }: { me: CurrentUser;
         <div key={i.id} className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-line px-2.5 py-2">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[12px] font-semibold">{i.email}</div>
-            <div className="text-[11px] text-pri-mid">초대 대기 · {fmtRelative(i.createdAt)}</div>
+            <div className="text-[11px] text-pri-mid">가입 전 · 초대 {fmtRelative(i.createdAt)}</div>
           </div>
           <button onClick={() => copy(inviteUrl(i.token))} className="h-6 rounded-md border border-line px-1.5 text-[11px]">링크</button>
           <button onClick={() => exec(() => renewInvite(i.id), { onOk: (d) => copy(inviteUrl(d.token)) })} className="h-6 rounded-md border border-line px-1.5 text-[11px]">재발송</button>
@@ -74,7 +74,7 @@ export function TeamPanel({ me, users, invites, maxMembers }: { me: CurrentUser;
       <Modal open={open} onClose={() => setOpen(false)} title="팀원 초대" width={440}>
         {link ? (
           <div>
-            <p className="text-[13px] text-sub">아래 링크를 초대할 분께 전달하세요. (14일 동안 유효)</p>
+            <p className="text-[13px] text-sub">초대 메일은 <b className="text-ink">자동으로 발송되지 않습니다.</b> 아래 링크를 카톡·메일 등으로 직접 전달하세요. 받은 분이 링크를 열어 이름과 비밀번호를 정해야 가입이 끝나고, 그 뒤부터 로그인할 수 있습니다. (14일 동안 유효)</p>
             <input readOnly value={link} className="input mt-2" onFocus={(e) => e.target.select()} />
             <div className="mt-4 flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => copy(link)}>복사</button>
