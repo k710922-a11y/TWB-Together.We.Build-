@@ -11,7 +11,7 @@ import { fmtRelative, ROLE_LABEL } from "@/lib/format";
 
 type Invite = { id: string; email: string; role: string; token: string; createdAt: string };
 
-export function TeamPanel({ me, users, invites, maxMembers }: { me: CurrentUser; users: UserLite[]; invites: Invite[]; maxMembers: number }) {
+export function TeamPanel({ me, users, invites, maxMembers, publicOrigin }: { me: CurrentUser; users: UserLite[]; invites: Invite[]; maxMembers: number; publicOrigin: string | null }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
@@ -19,7 +19,7 @@ export function TeamPanel({ me, users, invites, maxMembers }: { me: CurrentUser;
   const { exec, pending } = useAction();
   const toast = useToast();
   const isAdmin = me.role === "admin";
-  const inviteUrl = (token: string) => `${window.location.origin}/invite/${token}`;
+  const inviteUrl = (token: string) => `${publicOrigin ?? window.location.origin}/invite/${token}`;
   const copy = async (url: string) => {
     try { await navigator.clipboard.writeText(url); toast("초대 링크를 복사했습니다."); } catch { setLink(url); }
   };
