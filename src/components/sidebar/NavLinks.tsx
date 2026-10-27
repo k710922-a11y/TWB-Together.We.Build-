@@ -21,20 +21,23 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   if (compact) {
     return (
-      <div className="flex items-center gap-1 overflow-x-auto px-3 py-2">
-        <span className="mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand text-[13px] font-black text-white">T</span>
+      <div className="flex items-center gap-3 px-3 py-2">
+        <Link href="/" className="flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+          <Brand compact />
+        </Link>
+        <nav aria-label="주 메뉴" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {LINKS.map((l) => (
           <Link key={l.href} href={l.href} className={clsx("shrink-0 rounded-md px-2.5 py-1.5 text-[13px]", active(l.href) ? "bg-brand-50 font-semibold text-brand" : "text-ink")}>{l.label}</Link>
         ))}
+        </nav>
       </div>
     );
   }
   return (
     <div className="px-3 pt-5">
       <div className="mb-5 flex items-center justify-between px-2">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-[15px] font-black text-white">T</span>
-          <span className="text-[16px] font-bold">TWB</span>
+        <Link href="/" className="flex items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+          <Brand />
         </Link>
         <form action={logoutAction} className="flex items-center gap-1.5">
           <Avatar name={me.name} color={me.color} size={22} />
@@ -50,5 +53,17 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
         ))}
       </nav>
     </div>
+  );
+}
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      <span className={clsx("inline-flex shrink-0 items-center justify-center rounded-lg bg-brand font-black text-white", compact ? "h-7 w-7 text-[13px]" : "h-8 w-8 text-[15px]")}>T</span>
+      <span className="flex flex-col">
+        <span className={clsx("font-bold leading-tight", compact ? "text-[14px]" : "text-[16px]")}>TWB</span>
+        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium leading-tight text-sub">Together We Build</span>
+      </span>
+    </>
   );
 }
