@@ -5,6 +5,7 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
 import { AVATAR_COLORS } from "@/lib/format";
+import { logActivity } from "@/lib/audit";
 
 export type FormState = { error?: string } | undefined;
 
@@ -17,6 +18,9 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
   if (!u || !(await verifyPassword(password, u.passwordHash))) return { error: "이메일 또는 비밀번호가 맞지 않습니다." };
   if (!u.active) return { error: "해지된 계정입니다. 관리자에게 문의하세요." };
   await createSession(u.id);
+  await logActivity(u.id, "access", "login");
+  // 같은 순간 '접속'이 중복 기록되지 않도록 마지막 접속 시각도 함께 갱신
+  await db.update(schema.users).set({ lastSeenAt: new Date() }).where(eq(schema.users.id, u.id));
   redirect("/");
 }
 
@@ -38,7 +42,11 @@ export async function setupAction(_: FormState, fd: FormData): Promise<FormState
   const [u] = await db.insert(schema.users).values({
     name, email, passwordHash: await hashPassword(password), role: "admin", color: AVATAR_COLORS[0],
   }).returning();
-  if (teamProject) await db.insert(schema.projects).values({ title: teamProject });
+  await logActivity(u.id, "access", "joined", { label: "관리자" });
+  if (teamProject) {
+    const [p] = await db.insert(schema.projects).values({ title: teamProject }).returning();
+    await logActivity(u.id, "project", "project_create", { label: p.title, projectId: p.id, targetId: p.id });
+  }
   await createSession(u.id);
   redirect("/");
 }
@@ -75,6 +83,7 @@ export async function acceptInviteAction(_: FormState, fd: FormData): Promise<Fo
     userId = u.id;
   }
   await db.update(schema.invites).set({ acceptedAt: new Date() }).where(eq(schema.invites.id, inv.id));
+  await logActivity(userId, "access", "joined", { label: inv.role });
   await createSession(userId);
   redirect("/");
 }

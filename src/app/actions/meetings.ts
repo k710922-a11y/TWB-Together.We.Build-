@@ -8,6 +8,7 @@ import { assertRole } from "@/lib/auth";
 import { run, UserError } from "@/lib/result";
 import { analyzeMeeting, deleteFile, geminiReady, getFile, startUpload, transcribeSegment } from "@/lib/gemini";
 import { MAX_AUDIO_MB, SEGMENT_MIN } from "@/lib/limits";
+import { logActivity } from "@/lib/audit";
 
 const refresh = () => revalidatePath("/", "layout");
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -73,6 +74,7 @@ export async function createMeeting(input: MeetingInput) {
       createdBy: me.id,
       status: "draft",
     }).returning();
+    await logActivity(me.id, "meeting", input.audio ? "meeting_audio" : "meeting_create", { label: m.title, targetId: m.id, projectId: m.projectId });
     if (input.audio) {
       await beginAudio(m.id, input.audio);
     } else if (notes && geminiReady()) {
@@ -142,10 +144,11 @@ export async function updateMeetingText(id: string, patch: { title?: string; not
 
 export async function deleteMeeting(id: string) {
   return run(async () => {
-    await assertRole("editor");
+    const me = await assertRole("editor");
     const [m] = await db.select().from(schema.meetings).where(eq(schema.meetings.id, id)).limit(1);
     if (!m) return null;
     await db.delete(schema.meetings).where(eq(schema.meetings.id, id));
+    await logActivity(me.id, "meeting", "meeting_delete", { label: m.title, projectId: m.projectId });
     if (m.geminiFileName) await deleteFile(m.geminiFileName);
     refresh();
     return null; // 자동 등록된 태스크는 남긴다

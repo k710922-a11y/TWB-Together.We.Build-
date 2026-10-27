@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
 import { db, schema } from "./db";
+import { logActivity } from "./audit";
 
 const COOKIE = "twb_session";
 const SESSION_DAYS = 30;
@@ -62,6 +63,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   // '온라인' 표시용 마지막 접속 시각 (1분 단위로만 갱신)
   if (!u.lastSeenAt || Date.now() - u.lastSeenAt.getTime() > 60_000) {
     await db.update(schema.users).set({ lastSeenAt: new Date() }).where(eq(schema.users.id, u.id));
+    // 6시간 넘게 쉬었다가 다시 들어오면 '접속'으로 기록 (세션 쿠키가 30일 유지되므로 로그인만으로는 참여를 알 수 없음)
+    if (!u.lastSeenAt || Date.now() - u.lastSeenAt.getTime() > 6 * 3600_000) await logActivity(u.id, "access", "visit");
   }
   return { id: u.id, name: u.name, email: u.email, role: u.role as Role, color: u.color };
 });

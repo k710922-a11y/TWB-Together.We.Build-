@@ -187,3 +187,18 @@ export const meetings = pgTable("meetings", {
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* ── 참여 로그 ─────────────────────────────────────────
+ * 태스크 변경(task_activity)·댓글·게시판은 각 테이블에서 바로 모으고,
+ * 그 밖의 활동(접속·문서·자료·미팅·프로젝트·인원 관리)만 여기에 남긴다.
+ */
+export const activityLog = pgTable("activity_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // access | library | meeting | project | admin
+  action: text("action").notNull(),
+  label: text("label"),
+  targetId: uuid("target_id"),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("activity_log_user_idx").on(t.userId, t.createdAt)]);

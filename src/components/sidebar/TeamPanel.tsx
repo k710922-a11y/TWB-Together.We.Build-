@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import type { CurrentUser, Role } from "@/lib/auth";
 import type { UserLite } from "@/lib/queries";
@@ -34,7 +35,9 @@ export function TeamPanel({ me, users, invites, maxMembers }: { me: CurrentUser;
           <li key={u.id} className={`flex items-center gap-2.5 rounded-lg px-2 py-2 ${u.id === me.id ? "bg-brand-50/60" : ""}`}>
             <Avatar name={u.name} color={u.color} size={30} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-semibold">{u.name}</div>
+              {isAdmin || u.id === me.id
+                ? <Link href={`/team?user=${u.id}`} className="block truncate text-[13px] font-semibold hover:text-brand" title="참여 로그 보기">{u.name}</Link>
+                : <div className="truncate text-[13px] font-semibold">{u.name}</div>}
               <div className={`text-[11px] ${u.online ? "text-st-done" : "text-faint"}`}>{u.online ? "● 온라인" : "○ 오프라인"}</div>
             </div>
             {isAdmin && u.id !== me.id ? (

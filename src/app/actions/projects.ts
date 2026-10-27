@@ -6,12 +6,13 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
 import { run, UserError } from "@/lib/result";
+import { logActivity } from "@/lib/audit";
 
 const refresh = () => revalidatePath("/", "layout");
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function createProject(fd: FormData) {
-  await assertRole("editor");
+  const me = await assertRole("editor");
   const title = String(fd.get("title") ?? "").trim();
   if (!title) return;
   const description = String(fd.get("description") ?? "").trim() || null;
@@ -19,13 +20,14 @@ export async function createProject(fd: FormData) {
   const [p] = await db.insert(schema.projects).values({
     title, description, launchDate: DATE_RE.test(launch) ? launch : null,
   }).returning();
+  await logActivity(me.id, "project", "project_create", { label: p.title, projectId: p.id, targetId: p.id });
   refresh();
   redirect(`/projects/${p.id}`);
 }
 
 export async function updateProject(id: string, patch: { title?: string; description?: string | null; launchDate?: string | null; archived?: boolean }) {
   return run(async () => {
-    await assertRole("editor");
+    const me = await assertRole("editor");
     const set: Partial<typeof schema.projects.$inferInsert> = {};
     if (patch.title !== undefined) {
       if (!patch.title.trim()) throw new UserError("프로젝트 이름을 입력해 주세요.");
@@ -35,6 +37,7 @@ export async function updateProject(id: string, patch: { title?: string; descrip
     if (patch.launchDate !== undefined) set.launchDate = patch.launchDate && DATE_RE.test(patch.launchDate) ? patch.launchDate : null;
     if (patch.archived !== undefined) set.archived = patch.archived;
     await db.update(schema.projects).set(set).where(eq(schema.projects.id, id));
+    await logActivity(me.id, "project", patch.archived ? "project_archive" : "project_update", { label: set.title ?? null, projectId: id, targetId: id });
     refresh();
     return null;
   });
@@ -42,8 +45,10 @@ export async function updateProject(id: string, patch: { title?: string; descrip
 
 export async function deleteProject(id: string) {
   return run(async () => {
-    await assertRole("admin");
+    const me = await assertRole("admin");
+    const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, id));
     await db.delete(schema.projects).where(eq(schema.projects.id, id));
+    await logActivity(me.id, "project", "project_delete", { label: p?.title ?? null });
     refresh();
     return null;
   });

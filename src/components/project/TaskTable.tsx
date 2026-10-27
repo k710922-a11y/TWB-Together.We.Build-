@@ -1,14 +1,13 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { groupTasksBySubtitle } from "@/lib/task-groups";
 import clsx from "clsx";
 import { ChevronRight, Sparkles } from "lucide-react";
 import type { TaskRow, UserLite } from "@/lib/queries";
 import { createTask } from "@/app/actions/tasks";
 import { Empty, useAction } from "@/components/ui";
 import { AssigneeCell, DateCell, PriorityCell, StatusCell, useOpenTask, useTaskUpdate } from "./cells";
+import { SubtitleBar, subtitleLabel, useSubtitleView } from "./SubtitleBar";
 
 const GRID = "grid grid-cols-[minmax(260px,1fr)_120px_140px_120px_90px] items-center gap-3";
 
@@ -18,20 +17,9 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
   const [adding, setAdding] = useState("");
   const { exec } = useAction();
 
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const view = searchParams.get("tableView") === "subtitle" ? "subtitle" : "all";
-  const groups = groupTasksBySubtitle(tops);
-  const requestedSubtitle = searchParams.get("subtitle") ?? "";
-  const selectedSubtitle = groups.some((g) => g.subtitle === requestedSubtitle) ? requestedSubtitle : "";
-  const visibleGroups = selectedSubtitle ? groups.filter((g) => g.subtitle === selectedSubtitle) : groups;
+  const sv = useSubtitleView(tops);
+  const { view, visibleGroups } = sv;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const setOption = (key: string, value: string) => {
-    const q = new URLSearchParams(searchParams.toString());
-    if (value) q.set(key, value); else q.delete(key);
-    router.replace(`${pathname}?${q.toString()}`, { scroll: false });
-  };
   const renderTasks = (items: TaskRow[]) => items.map((t) => {
     const subs = tasks.filter((s) => s.parentId === t.id);
     const isOpen = open[t.id] ?? false;
@@ -83,24 +71,8 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
 
   return (
     <section>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-[13px] font-medium text-sub">
-          보기
-          <select aria-label="태스크 보기" className="input w-auto min-w-[150px]" value={view} onChange={(e) => setOption("tableView", e.target.value)}>
-            <option value="all">전체 보기</option>
-            <option value="subtitle">[소제목]별 보기</option>
-          </select>
-        </label>
-        {view === "subtitle" && (
-          <label className="flex items-center gap-2 text-[13px] font-medium text-sub">
-            소제목
-            <select aria-label="소제목 선택" className="input w-auto min-w-[170px]" value={selectedSubtitle} onChange={(e) => setOption("subtitle", e.target.value)}>
-              <option value="">모든 소제목</option>
-              {groups.map((g) => <option key={g.subtitle} value={g.subtitle}>{g.subtitle === "미분류" ? "미분류" : `[${g.subtitle}]`} ({g.tasks.length})</option>)}
-            </select>
-          </label>
-        )}
-        <span className="text-[12.5px] text-faint">{view === "subtitle" ? visibleGroups.reduce((sum, g) => sum + g.tasks.length, 0) : tops.length}개 태스크</span>
+      <div className="mb-3">
+        <SubtitleBar sv={sv} count={view === "subtitle" ? visibleGroups.reduce((sum, g) => sum + g.tasks.length, 0) : tops.length} />
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[760px]">
@@ -117,7 +89,7 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
                     onClick={() => setCollapsed((prev) => ({ ...prev, [group.subtitle]: !isCollapsed }))}
                     className="flex w-full items-center gap-2 rounded-lg bg-brand-50 px-4 py-3 text-left text-[13.5px] font-semibold text-brand">
                     <ChevronRight size={15} className={clsx("shrink-0 transition-transform", !isCollapsed && "rotate-90")} />
-                    {group.subtitle === "미분류" ? "미분류" : `[${group.subtitle}]`}
+                    {subtitleLabel(group.subtitle)}
                     <span className="text-[12px] font-normal">{group.tasks.length}개 태스크</span>
                   </button>
                 </h3>

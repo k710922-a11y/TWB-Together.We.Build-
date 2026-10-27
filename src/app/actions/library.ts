@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
 import { run, UserError } from "@/lib/result";
+import { logActivity } from "@/lib/audit";
 
 const refresh = () => revalidatePath("/", "layout");
 
@@ -13,10 +14,11 @@ export async function addLink(input: { name: string; url: string; projectId?: st
     const me = await assertRole("editor");
     const url = input.url.trim();
     if (!/^https?:\/\//i.test(url)) throw new UserError("http:// 또는 https:// 로 시작하는 주소를 입력해 주세요.");
-    await db.insert(schema.files).values({
+    const [f] = await db.insert(schema.files).values({
       kind: "link", name: input.name.trim() || url, url, projectId: input.projectId || null,
       category: input.category?.trim() || null, note: input.note?.trim() || null, uploadedBy: me.id,
-    });
+    }).returning();
+    await logActivity(me.id, "library", "link_add", { label: f.name, targetId: f.id, projectId: f.projectId });
     refresh();
     return null;
   });
@@ -38,10 +40,11 @@ export async function updateFileMeta(id: string, patch: { name?: string; categor
 
 export async function deleteFile(id: string) {
   return run(async () => {
-    await assertRole("editor");
+    const me = await assertRole("editor");
     const [f] = await db.select().from(schema.files).where(eq(schema.files.id, id)).limit(1);
     if (!f) return null;
     await db.delete(schema.files).where(eq(schema.files.id, id)); // 청크는 cascade 삭제
+    await logActivity(me.id, "library", "file_delete", { label: f.name, projectId: f.projectId });
     refresh();
     return null;
   });
@@ -56,6 +59,7 @@ export async function createDoc(input: { title: string; folder?: string; project
       title, folder: input.folder?.trim() || "일반", projectId: input.projectId || null, updatedBy: me.id,
       content: `# ${title}\n\n`,
     }).returning({ id: schema.docs.id });
+    await logActivity(me.id, "library", "doc_create", { label: title, targetId: d.id, projectId: input.projectId || null });
     refresh();
     return { id: d.id };
   });
@@ -72,6 +76,7 @@ export async function saveDoc(id: string, expectedVersion: number, patch: { titl
       version: sql`${schema.docs.version} + 1`,
     }).where(and(eq(schema.docs.id, id), eq(schema.docs.version, expectedVersion))).returning({ version: schema.docs.version });
     if (!updated.length) throw new UserError("다른 팀원이 먼저 이 문서를 저장했습니다. 내 변경 내용을 복사해 두고 새로고침하세요.");
+    await logActivity(me.id, "library", "doc_save", { label: patch.title.trim(), targetId: id, projectId: patch.projectId || null });
     refresh();
     return { version: updated[0].version };
   });
@@ -79,8 +84,10 @@ export async function saveDoc(id: string, expectedVersion: number, patch: { titl
 
 export async function deleteDoc(id: string) {
   return run(async () => {
-    await assertRole("editor");
+    const me = await assertRole("editor");
+    const [d] = await db.select({ title: schema.docs.title }).from(schema.docs).where(eq(schema.docs.id, id));
     await db.delete(schema.docs).where(eq(schema.docs.id, id));
+    await logActivity(me.id, "library", "doc_delete", { label: d?.title ?? null });
     refresh();
     return null;
   });

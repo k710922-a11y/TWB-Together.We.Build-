@@ -5,6 +5,7 @@ import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { assertRole, newToken, type Role } from "@/lib/auth";
 import { run, UserError } from "@/lib/result";
+import { logActivity } from "@/lib/audit";
 
 const ROLES: Role[] = ["admin", "editor", "viewer"];
 const refresh = () => revalidatePath("/", "layout");
@@ -26,6 +27,7 @@ export async function inviteMember(email: string, role: Role) {
     await db.delete(schema.invites).where(and(eq(schema.invites.email, e), isNull(schema.invites.acceptedAt)));
     const token = newToken();
     await db.insert(schema.invites).values({ email: e, role, token, invitedBy: me.id });
+    await logActivity(me.id, "admin", "member_invite", { label: `${e} (${role})` });
     refresh();
     return { token };
   });
@@ -60,10 +62,12 @@ async function adminCountExcept(userId: string) {
 
 export async function changeRole(userId: string, role: Role) {
   return run(async () => {
-    await assertRole("admin");
+    const me = await assertRole("admin");
     if (!ROLES.includes(role)) throw new UserError("역할이 올바르지 않습니다.");
     if (role !== "admin" && (await adminCountExcept(userId)) === 0) throw new UserError("관리자가 최소 1명은 있어야 합니다.");
     await db.update(schema.users).set({ role }).where(eq(schema.users.id, userId));
+    const [u] = await db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, userId));
+    await logActivity(me.id, "admin", "member_role", { label: `${u?.name ?? ""} → ${role}`, targetId: userId });
     refresh();
     return null;
   });
@@ -80,6 +84,8 @@ export async function deactivateMember(userId: string) {
       await tx.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
       await tx.update(schema.tasks).set({ assigneeId: null }).where(eq(schema.tasks.assigneeId, userId));
     });
+    const [u] = await db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, userId));
+    await logActivity(me.id, "admin", "member_deactivate", { label: u?.name ?? null, targetId: userId });
     refresh();
     return null;
   });

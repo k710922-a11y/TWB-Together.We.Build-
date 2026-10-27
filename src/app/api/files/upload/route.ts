@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { CHUNK_BYTES, MAX_FILE_MB } from "@/lib/limits";
+import { logActivity } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "파일이 끝까지 전송되지 않았습니다. 다시 올려 주세요." }, { status: 400 });
     }
     await db.update(schema.files).set({ complete: true }).where(eq(schema.files.id, id));
+    await logActivity(me.id, "library", "file_upload", { label: f.name, targetId: id, projectId: f.projectId });
     return NextResponse.json({ id, name: f.name });
   }
   return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });

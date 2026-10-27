@@ -15,10 +15,11 @@ const LINKS = [
   { href: "/library", label: "자료실" },
   { href: "/meetings", label: "미팅 로그" },
 ];
+const teamLink = (me: CurrentUser) => ({ href: me.role === "admin" ? "/team" : `/team?user=${me.id}`, label: me.role === "admin" ? "참여 로그" : "내 활동" });
 
 export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }) {
   const path = usePathname();
-  const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.split("?")[0]));
   if (compact) {
     return (
       <div className="flex items-center gap-3 px-3 py-2">
@@ -26,7 +27,7 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
           <Brand compact />
         </Link>
         <nav aria-label="주 메뉴" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-        {LINKS.map((l) => (
+        {[...LINKS, teamLink(me)].map((l) => (
           <Link key={l.href} href={l.href} className={clsx("shrink-0 rounded-md px-2.5 py-1.5 text-[13px]", active(l.href) ? "bg-brand-50 font-semibold text-brand" : "text-ink")}>{l.label}</Link>
         ))}
         </nav>
@@ -45,7 +46,7 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
         </form>
       </div>
       <nav className="space-y-0.5">
-        {LINKS.map((l) => (
+        {[...LINKS, teamLink(me)].map((l) => (
           <Link key={l.href} href={l.href}
             className={clsx("block rounded-lg px-3 py-2.5 text-[14px]", active(l.href) ? "bg-brand-50 font-semibold text-brand" : "text-ink hover:bg-canvas")}>
             {l.label}
