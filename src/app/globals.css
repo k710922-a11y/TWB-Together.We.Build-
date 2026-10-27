@@ -56,3 +56,8 @@ body { font-size: 14px; -webkit-font-smoothing: antialiased; }
 .prose-twb th, .prose-twb td { @apply border border-line px-2 py-1; }
 .prose-twb th { @apply bg-canvas; }
 .prose-twb blockquote { @apply border-l-4 border-line pl-3 text-sub my-2; }
+
+/* 위키 속 자료실 파일 */
+.prose-twb img { @apply my-3 max-w-full rounded-lg border border-line; }
+.prose-twb a[href^="/files/"] { @apply inline-flex items-center rounded-md bg-brand-50 px-1.5 py-0.5 no-underline text-[13px] font-medium; }
+.prose-twb a[data-missing] { @apply bg-canvas text-faint line-through; }
