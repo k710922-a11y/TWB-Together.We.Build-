@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { LogOut } from "lucide-react";
+import { ArrowUpRight, LogOut } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import type { CurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/ui";
@@ -15,6 +15,9 @@ const LINKS = [
   { href: "/library", label: "자료실" },
   { href: "/meetings", label: "미팅 로그" },
 ];
+/** DG&F 사내 인트라넷 (전자결재·조직도·재무). 주소가 바뀌면 NEXT_PUBLIC_INTRANET_URL로 덮어쓴다. */
+const INTRANET_URL = process.env.NEXT_PUBLIC_INTRANET_URL ?? "https://dgf-intranet.vercel.app";
+
 const teamLink = (me: CurrentUser) => ({ href: me.role === "admin" ? "/team" : `/team?user=${me.id}`, label: me.role === "admin" ? "참여 로그" : "내 활동" });
 
 export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }) {
@@ -31,6 +34,8 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
           <Link key={l.href} href={l.href} className={clsx("shrink-0 rounded-md px-2.5 py-1.5 text-[13px]", active(l.href) ? "bg-brand-50 font-semibold text-brand" : "text-ink")}>{l.label}</Link>
         ))}
         </nav>
+        <a href={INTRANET_URL} target="_blank" rel="noopener noreferrer" aria-label="DG&F 인트라넷 열기 (새 탭)" title="DG&F 인트라넷"
+          className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><IntranetMark size={26} /></a>
       </div>
     );
   }
@@ -53,7 +58,27 @@ export function NavLinks({ me, compact }: { me: CurrentUser; compact?: boolean }
           </Link>
         ))}
       </nav>
+      <a href={INTRANET_URL} target="_blank" rel="noopener noreferrer" aria-label="DG&F 인트라넷 열기 (새 탭)"
+        className="group mt-3 flex items-center gap-3 rounded-xl border border-[#2A2E4D] bg-[#15172A] px-3 py-2.5 text-white transition-colors hover:border-[#4A55D8] hover:bg-[#1D2040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+        <IntranetMark size={32} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[14px] font-semibold leading-tight">DG&amp;F 인트라넷</span>
+          <span className="mt-0.5 truncate text-[11px] leading-tight text-[#B9BDD9]">전자결재 · 조직도 · 재무</span>
+        </span>
+        <ArrowUpRight size={15} className="shrink-0 text-[#B9BDD9] transition-colors group-hover:text-white" aria-hidden="true" />
+      </a>
     </div>
+  );
+}
+
+/** 인트라넷 파비콘과 같은 DG&F 마크 */
+function IntranetMark({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
+      <rect width="64" height="64" rx="14" fill="#2f3fb8" />
+      <path fill="#fff" fillRule="evenodd" d="M16 13h14a19 19 0 0 1 0 38H16zM25 22v20h5a10 10 0 0 0 0-20z" />
+      <circle cx="31" cy="32" r="4.5" fill="#ffc24b" />
+    </svg>
   );
 }
 
