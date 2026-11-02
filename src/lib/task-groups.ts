@@ -15,3 +15,25 @@ export function groupTasksBySubtitle<T extends { title: string }>(tasks: T[]): {
   }
   return Array.from(groups, ([subtitle, tasks]) => ({ subtitle, tasks }));
 }
+
+export type Category = { name: string; subtitles: string[] };
+export type TaskGroup<T> = { key: string; label: string; tasks: T[]; subtitles: string[] };
+
+/**
+ * 대분류별 묶기. 대분류 순서를 따르고, 어느 대분류에도 없는 소제목은 마지막 '기타'에 모은다.
+ * 각 묶음 안에서는 소제목 순서대로, 같은 소제목 안에서는 원래 순서대로 둔다.
+ */
+export function groupTasksByCategory<T extends { title: string }>(tasks: T[], categories: Category[]): TaskGroup<T>[] {
+  const bySub = groupTasksBySubtitle(tasks);
+  const owner = new Map<string, string>();
+  for (const c of categories) for (const s of c.subtitles) if (!owner.has(s)) owner.set(s, c.name);
+  const out: TaskGroup<T>[] = categories.map((c) => ({ key: `c:${c.name}`, label: c.name, tasks: [], subtitles: [] }));
+  const etc: TaskGroup<T> = { key: "c:__etc__", label: "기타 (대분류 미지정)", tasks: [], subtitles: [] };
+  for (const g of bySub) {
+    const name = owner.get(g.subtitle);
+    const target = name ? out.find((o) => o.label === name)! : etc;
+    target.tasks.push(...g.tasks);
+    target.subtitles.push(g.subtitle);
+  }
+  return [...out, etc].filter((g) => g.tasks.length > 0);
+}

@@ -202,3 +202,14 @@ export const activityLog = pgTable("activity_log", {
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("activity_log_user_idx").on(t.userId, t.createdAt)]);
+
+/* ── 대분류(소제목 묶음) ───────────────────────────────
+ * 태스크 제목의 [소제목]을 프로젝트별 대분류로 묶는다. 제목은 바꾸지 않는다.
+ */
+export const subtitleGroups = pgTable("subtitle_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  subtitles: jsonb("subtitles").$type<string[]>().notNull().default([]),
+}, (t) => [index("subtitle_groups_project_idx").on(t.projectId)]);

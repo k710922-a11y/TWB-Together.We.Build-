@@ -100,3 +100,25 @@ export async function saveMilestones(projectId: string, items: MilestoneInput[])
     return null;
   });
 }
+
+/** 분류 묶음(대분류) 통째로 저장 */
+export async function saveCategories(projectId: string, categories: { name: string; subtitles: string[] }[]) {
+  return run(async () => {
+    const me = await assertRole("editor");
+    const seen = new Set<string>();
+    const clean = categories.map((c, i) => {
+      const name = c.name.trim() || `대분류 ${i + 1}`;
+      if (seen.has(name)) throw new UserError(`대분류 이름 '${name}'이(가) 중복됩니다.`);
+      seen.add(name);
+      if (name.length > 40) throw new UserError("대분류 이름은 40자 이내로 입력해 주세요.");
+      return { name, subtitles: [...new Set(c.subtitles.map((s) => s.trim()).filter(Boolean))] };
+    });
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.subtitleGroups).where(eq(schema.subtitleGroups.projectId, projectId));
+      if (clean.length) await tx.insert(schema.subtitleGroups).values(clean.map((c, i) => ({ projectId, name: c.name, subtitles: c.subtitles, sortOrder: i })));
+    });
+    await logActivity(me.id, "project", "project_update", { label: `분류 묶음 ${clean.length}개`, projectId, targetId: projectId });
+    refresh();
+    return null;
+  });
+}

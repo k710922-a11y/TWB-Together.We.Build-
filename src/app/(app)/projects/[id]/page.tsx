@@ -8,6 +8,8 @@ import { computeProgress, listMeetings, listUsers, meetingDetail, projectDeps, p
 import { ProgressCard } from "@/components/project/ProgressCard";
 import { ProjectHeader } from "@/components/project/ProjectHeader";
 import { TaskTable } from "@/components/project/TaskTable";
+import { CategoryProvider } from "@/components/project/SubtitleBar";
+import { groupTasksBySubtitle } from "@/lib/task-groups";
 import { Kanban } from "@/components/project/Kanban";
 import { Gantt } from "@/components/project/Gantt";
 import { ProjectDashboard } from "@/components/project/ProjectDashboard";
@@ -45,13 +47,16 @@ export default async function ProjectPage({ params, searchParams }: {
   if (!project) notFound();
 
   const tab = (TABS.find((t) => t.key === sp.tab)?.key ?? "table") as (typeof TABS)[number]["key"];
-  const [tasks, users, milestones, deps, meetings, detail] = await Promise.all([
+  const [tasks, users, milestones, deps, meetings, detail, categoryRows] = await Promise.all([
     projectTasks(id), listUsers(),
     db.select().from(schema.milestones).where(eq(schema.milestones.projectId, id)).orderBy(asc(schema.milestones.date)),
     projectDeps(id),
     tab === "meetings" ? listMeetings(id) : Promise.resolve([]),
     sp.task && /^[0-9a-f-]{36}$/i.test(sp.task) ? taskDetail(sp.task) : Promise.resolve(null),
+    db.select({ name: schema.subtitleGroups.name, subtitles: schema.subtitleGroups.subtitles }).from(schema.subtitleGroups)
+      .where(eq(schema.subtitleGroups.projectId, id)).orderBy(asc(schema.subtitleGroups.sortOrder)),
   ]);
+  const allSubtitles = groupTasksBySubtitle(tasks.filter((t) => !t.parentId)).map((g) => g.subtitle);
 
   // 필터 (담당자·상태·우선순위)
   const filters = { assignee: sp.assignee ?? "", status: sp.status ?? "", priority: sp.priority ?? "" };
@@ -71,7 +76,7 @@ export default async function ProjectPage({ params, searchParams }: {
     const q = new URLSearchParams();
     q.set("tab", k);
     for (const [kk, v] of Object.entries(filters)) if (v) q.set(kk, v);
-    if (sp.tableView === "subtitle") q.set("tableView", "subtitle");
+    if (sp.tableView === "subtitle" || sp.tableView === "category" || sp.tableView === "all") q.set("tableView", sp.tableView);
     if (sp.subtitle) q.set("subtitle", sp.subtitle);
     return `/projects/${id}?${q.toString()}`;
   };
@@ -96,9 +101,11 @@ export default async function ProjectPage({ params, searchParams }: {
         <ProgressCard projectId={id} title={project.title} launchDate={project.launchDate} progress={progress}
           milestones={milestones.map((m) => ({ id: m.id, title: m.title, date: m.date, done: m.done }))} editable={editable} />
 
+        <CategoryProvider value={{ projectId: id, categories: categoryRows, allSubtitles, editable }}>
         {tab === "table" && <TaskTable projectId={id} tasks={filtered} users={activeUsers} editable={editable} />}
         {tab === "kanban" && <Kanban projectId={id} tasks={filtered.filter((t) => !t.parentId)} allTasks={tasks} users={activeUsers} editable={editable} />}
         {tab === "gantt" && <Gantt tasks={filtered.filter((t) => !t.parentId)} deps={deps} milestones={milestones.map((m) => ({ title: m.title, date: m.date }))} />}
+        </CategoryProvider>
         {tab === "meetings" && <ProjectMeetings key={selectedMeeting?.meeting.id ?? "none"} projectId={id} meetings={meetings} selected={selectedMeeting} users={activeUsers} editable={editable} />}
         {tab === "dashboard" && <ProjectDashboard tasks={tasks} users={activeUsers} />}
       </div>

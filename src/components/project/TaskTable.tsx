@@ -7,7 +7,7 @@ import type { TaskRow, UserLite } from "@/lib/queries";
 import { createTask } from "@/app/actions/tasks";
 import { Empty, useAction } from "@/components/ui";
 import { AssigneeCell, DateCell, PriorityCell, StatusCell, useOpenTask, useTaskUpdate } from "./cells";
-import { SubtitleBar, subtitleLabel, useSubtitleView } from "./SubtitleBar";
+import { SubtitleBar, useSubtitleView } from "./SubtitleBar";
 
 const GRID = "grid grid-cols-[minmax(260px,1fr)_120px_140px_120px_90px] items-center gap-3";
 
@@ -72,7 +72,7 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
   return (
     <section>
       <div className="mb-3">
-        <SubtitleBar sv={sv} count={view === "subtitle" ? visibleGroups.reduce((sum, g) => sum + g.tasks.length, 0) : tops.length} />
+        <SubtitleBar sv={sv} count={view !== "all" ? visibleGroups.reduce((sum, g) => sum + g.tasks.length, 0) : tops.length} />
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[760px]">
@@ -83,13 +83,13 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
           {view === "all" ? renderTasks(tops) : visibleGroups.map((group) => {
             const isCollapsed = collapsed[group.subtitle] === true;
             return (
-              <section key={group.subtitle} aria-label={`[${group.subtitle}] 태스크 그룹`} className="mt-3">
+              <section key={group.subtitle} aria-label={`${group.label} 태스크 그룹`} className="mt-3">
                 <h3>
                   <button type="button" aria-expanded={!isCollapsed}
                     onClick={() => setCollapsed((prev) => ({ ...prev, [group.subtitle]: !isCollapsed }))}
                     className="flex w-full items-center gap-2 rounded-lg bg-brand-50 px-4 py-3 text-left text-[13.5px] font-semibold text-brand">
                     <ChevronRight size={15} className={clsx("shrink-0 transition-transform", !isCollapsed && "rotate-90")} />
-                    {subtitleLabel(group.subtitle)}
+                    {group.label}
                     <span className="text-[12px] font-normal">{group.tasks.length}개 태스크</span>
                   </button>
                 </h3>

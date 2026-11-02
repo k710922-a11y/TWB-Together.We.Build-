@@ -10,7 +10,7 @@ import { Avatar, Empty, PriorityText, useAction } from "@/components/ui";
 import { STATUSES, STATUS_LABEL, STATUS_STYLE, fmtShort, todayStr, type Status } from "@/lib/format";
 import { useOpenTask } from "./cells";
 import { NewTaskModal } from "./ProjectHeader";
-import { SubtitleBar, subtitleLabel, useSubtitleView } from "./SubtitleBar";
+import { SubtitleBar, useSubtitleView } from "./SubtitleBar";
 
 /** 소제목 레인의 드롭 영역 id = "소제목␀상태" */
 const LANE_SEP = "\u0000";
@@ -42,7 +42,7 @@ export function Kanban({ projectId, tasks, allTasks, users, editable }: {
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setDragId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setDragId(null)}>
       <div className="mb-3">
-        <SubtitleBar sv={sv} count={view === "subtitle" ? visibleGroups.reduce((n, g) => n + g.tasks.length, 0) : items.length} />
+        <SubtitleBar sv={sv} count={view !== "all" ? visibleGroups.reduce((n, g) => n + g.tasks.length, 0) : items.length} />
       </div>
       {view === "all" ? (
         <div className="grid gap-4 overflow-x-auto pb-2 md:grid-cols-2 xl:grid-cols-4">
@@ -62,13 +62,13 @@ export function Kanban({ projectId, tasks, allTasks, users, editable }: {
             const isCollapsed = collapsed[g.subtitle] === true;
             const done = g.tasks.filter((t) => t.status === "done").length;
             return (
-              <section key={g.subtitle} aria-label={`${subtitleLabel(g.subtitle)} 레인`} className="min-w-[960px] rounded-xl border border-line">
+              <section key={g.subtitle} aria-label={`${g.label} 레인`} className="min-w-[960px] rounded-xl border border-line">
                 <h3>
                   <button type="button" aria-expanded={!isCollapsed}
                     onClick={() => setCollapsed((c) => ({ ...c, [g.subtitle]: !isCollapsed }))}
                     className={clsx("flex w-full items-center gap-2 bg-brand-50 px-4 py-2.5 text-left text-[13.5px] font-semibold text-brand", isCollapsed ? "rounded-xl" : "rounded-t-xl")}>
                     <ChevronRight size={15} className={clsx("shrink-0 transition-transform", !isCollapsed && "rotate-90")} />
-                    {subtitleLabel(g.subtitle)}
+                    {g.label}
                     <span className="text-[12px] font-normal">{g.tasks.length}개 · 완료 {done}</span>
                     {isCollapsed && (
                       <span className="ml-auto flex gap-1.5">
