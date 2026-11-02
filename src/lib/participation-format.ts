@@ -45,7 +45,7 @@ export function describe(it: Item): { text: string; quote?: string } {
       } as Record<string, string>)[it.action] ?? `미팅: ${L}` };
     case "project":
       return { text: ({
-        project_create: `프로젝트 ${L}을(를) 만들었습니다`, project_update: "프로젝트 설정을 바꿨습니다",
+        project_create: `프로젝트 ${L}을(를) 만들었습니다`, project_update: "프로젝트 설정을 바꿨습니다", project_rename: `프로젝트 이름을 바꿨습니다 (${it.label ?? ""})`,
         project_archive: "프로젝트를 보관했습니다", project_delete: `프로젝트 ${L}을(를) 삭제했습니다`,
       } as Record<string, string>)[it.action] ?? "프로젝트 변경" };
     case "access":

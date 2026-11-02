@@ -25,6 +25,23 @@ export async function createProject(fd: FormData) {
   redirect(`/projects/${p.id}`);
 }
 
+/** 프로젝트 이름만 변경 (참여 로그에 '이전 → 새 이름'으로 남김) */
+export async function renameProject(id: string, title: string) {
+  return run(async () => {
+    const me = await assertRole("editor");
+    const next = title.trim();
+    if (!next) throw new UserError("프로젝트 이름을 입력해 주세요.");
+    if (next.length > 100) throw new UserError("프로젝트 이름은 100자 이내로 입력해 주세요.");
+    const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, id)).limit(1);
+    if (!p) throw new UserError("프로젝트를 찾을 수 없습니다.");
+    if (p.title === next) return null;
+    await db.update(schema.projects).set({ title: next }).where(eq(schema.projects.id, id));
+    await logActivity(me.id, "project", "project_rename", { label: `${p.title} → ${next}`, projectId: id, targetId: id });
+    refresh();
+    return null;
+  });
+}
+
 export async function updateProject(id: string, patch: { title?: string; description?: string | null; launchDate?: string | null; archived?: boolean }) {
   return run(async () => {
     const me = await assertRole("editor");
@@ -36,8 +53,14 @@ export async function updateProject(id: string, patch: { title?: string; descrip
     if (patch.description !== undefined) set.description = patch.description?.trim() || null;
     if (patch.launchDate !== undefined) set.launchDate = patch.launchDate && DATE_RE.test(patch.launchDate) ? patch.launchDate : null;
     if (patch.archived !== undefined) set.archived = patch.archived;
+    const [before] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, id)).limit(1);
     await db.update(schema.projects).set(set).where(eq(schema.projects.id, id));
-    await logActivity(me.id, "project", patch.archived ? "project_archive" : "project_update", { label: set.title ?? null, projectId: id, targetId: id });
+    if (set.title && before && before.title !== set.title) {
+      await logActivity(me.id, "project", "project_rename", { label: `${before.title} → ${set.title}`, projectId: id, targetId: id });
+    }
+    if (patch.archived || patch.description !== undefined || patch.launchDate !== undefined) {
+      await logActivity(me.id, "project", patch.archived ? "project_archive" : "project_update", { label: set.title ?? before?.title ?? null, projectId: id, targetId: id });
+    }
     refresh();
     return null;
   });

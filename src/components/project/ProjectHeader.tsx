@@ -6,6 +6,7 @@ import { Filter, Settings2 } from "lucide-react";
 import type { UserLite } from "@/lib/queries";
 import { createTask } from "@/app/actions/tasks";
 import { deleteProject, updateProject } from "@/app/actions/projects";
+import { EditableProjectTitle } from "./RenameProject";
 import { Modal, Popover, useAction } from "@/components/ui";
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type Priority, type Status } from "@/lib/format";
 
@@ -31,7 +32,7 @@ export function ProjectHeader({ project, users, filters, editable, isAdmin }: {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="truncate text-[24px] font-bold tracking-tight">{project.title}</h1>
+        <EditableProjectTitle projectId={project.id} title={project.title} editable={editable} />
         {project.description && <p className="mt-0.5 text-[13px] text-sub">{project.description}</p>}
       </div>
       <div className="flex items-center gap-2">
@@ -59,7 +60,7 @@ export function ProjectHeader({ project, users, filters, editable, isAdmin }: {
         {editable && <button className="btn-primary" onClick={() => setNewOpen(true)}>+ 새 태스크</button>}
       </div>
       <NewTaskModal open={newOpen} onClose={() => setNewOpen(false)} projectId={project.id} users={users} />
-      <ProjectSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} project={project} isAdmin={isAdmin} />
+      <ProjectSettings key={`${project.title}|${project.description}|${project.launchDate}`} open={settingsOpen} onClose={() => setSettingsOpen(false)} project={project} isAdmin={isAdmin} />
     </div>
   );
 }

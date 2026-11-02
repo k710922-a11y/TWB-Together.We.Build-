@@ -3,6 +3,7 @@ import { canEdit, requireUser } from "@/lib/auth";
 import { listProjects } from "@/lib/queries";
 import { createProject } from "@/app/actions/projects";
 import { Empty } from "@/components/ui";
+import { RenameProjectButton } from "@/components/project/RenameProject";
 import { fmtKoDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,15 @@ export default async function Projects() {
       {projects.length === 0 && <Empty>아직 프로젝트가 없습니다.</Empty>}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((p) => (
-          <Link key={p.id} href={`/projects/${p.id}`} className="card block p-5 hover:border-brand/40">
+          <article key={p.id} className="card relative hover:border-brand/40">
+          <Link href={`/projects/${p.id}`} className={`block rounded-xl p-5 ${canEdit(me) ? "pr-14" : ""}`}>
             <div className="flex items-center justify-between gap-2"><span className="truncate text-[15px] font-bold">{p.title}</span><span className="font-bold text-brand">{p.progress.percent}%</span></div>
             {p.description && <p className="mt-1 line-clamp-2 text-[12.5px] text-sub">{p.description}</p>}
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-canvas"><div className="h-full rounded-full" style={{ width: `${p.progress.percent}%`, background: "linear-gradient(90deg,#6c5cf5,#4f8df7)" }} /></div>
             <div className="mt-2 text-[12px] text-sub">태스크 {p.progress.total} · 지연 {p.progress.delayed}{p.launchDate ? ` · 오픈 목표 ${fmtKoDate(p.launchDate)}` : ""}</div>
           </Link>
+          {canEdit(me) && <div className="absolute right-3 top-3"><RenameProjectButton projectId={p.id} title={p.title} /></div>}
+          </article>
         ))}
       </div>
       {canEdit(me) && (

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
+import { canEdit, requireUser } from "@/lib/auth";
 import { dueSoonTasks, listMeetings, listProjects, listUsers, myOpenTasks } from "@/lib/queries";
 import { TaskListRows } from "@/components/pages/TaskListRows";
 import { Empty } from "@/components/ui";
 import { DeleteProjectButton } from "@/components/pages/DeleteProjectButton";
+import { RenameProjectButton } from "@/components/project/RenameProject";
 import { fmtKoDate } from "@/lib/format";
 import { geminiReady } from "@/lib/gemini";
 
@@ -31,12 +32,17 @@ export default async function Home() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {projects.map((p) => (
               <article key={p.id} className="card relative hover:border-brand/40">
-                <Link href={`/projects/${p.id}`} className={`block rounded-xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${me.role === "admin" ? "pr-14" : ""}`}>
+                <Link href={`/projects/${p.id}`} className={`block rounded-xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${me.role === "admin" ? "pr-[88px]" : canEdit(me) ? "pr-14" : ""}`}>
                   <div className="flex min-w-0 items-center justify-between gap-2"><span className="truncate text-[14.5px] font-bold">{p.title}</span><span className="shrink-0 text-[13px] font-bold text-brand">{p.progress.percent}%</span></div>
                   <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-canvas"><div className="h-full rounded-full" style={{ width: `${p.progress.percent}%`, background: "linear-gradient(90deg,#6c5cf5,#4f8df7)" }} /></div>
                   <div className="mt-2 text-[12px] text-sub">완료 {p.progress.done}/{p.progress.total} · 진행 중 {p.progress.inProgress} · 지연 {p.progress.delayed}{p.launchDate ? ` · 오픈 ${fmtKoDate(p.launchDate)}` : ""}</div>
                 </Link>
-              {me.role === "admin" && <div className="absolute right-3 top-3"><DeleteProjectButton projectId={p.id} projectTitle={p.title} /></div>}
+              {canEdit(me) && (
+                <div className="absolute right-3 top-3 flex gap-0.5">
+                  <RenameProjectButton projectId={p.id} title={p.title} />
+                  {me.role === "admin" && <DeleteProjectButton projectId={p.id} projectTitle={p.title} />}
+                </div>
+              )}
               </article>
             ))}
           </div>
