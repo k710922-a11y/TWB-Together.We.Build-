@@ -8,6 +8,8 @@ import { createTask } from "@/app/actions/tasks";
 import { Empty, useAction } from "@/components/ui";
 import { AssigneeCell, DateCell, PriorityCell, StatusCell, useOpenTask, useTaskUpdate } from "./cells";
 import { SubtitleBar, useSubtitleView } from "./SubtitleBar";
+import { MiniGauge } from "./MiniGauge";
+import { groupProgress } from "@/lib/group-progress";
 
 const GRID = "grid grid-cols-[minmax(260px,1fr)_120px_140px_120px_90px] items-center gap-3";
 
@@ -89,8 +91,9 @@ export function TaskTable({ projectId, tasks, users, editable }: { projectId: st
                     onClick={() => setCollapsed((prev) => ({ ...prev, [group.subtitle]: !isCollapsed }))}
                     className="flex w-full items-center gap-2 rounded-lg bg-brand-50 px-4 py-3 text-left text-[13.5px] font-semibold text-brand">
                     <ChevronRight size={15} className={clsx("shrink-0 transition-transform", !isCollapsed && "rotate-90")} />
-                    {group.label}
-                    <span className="text-[12px] font-normal">{group.tasks.length}개 태스크</span>
+                    <span className="min-w-0 truncate">{group.label}</span>
+                    <span className="shrink-0 text-[12px] font-normal">{group.tasks.length}개 태스크</span>
+                    <span className="ml-3"><MiniGauge p={groupProgress(group.tasks, tasks)} /></span>
                   </button>
                 </h3>
                 {!isCollapsed && renderTasks(group.tasks)}

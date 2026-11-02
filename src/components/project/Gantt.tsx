@@ -8,11 +8,13 @@ import { STATUS_STYLE, addDays, diffDays, fmtShort, parseDay, todayStr } from "@
 import { useOpenTask } from "./cells";
 import { ChevronRight } from "lucide-react";
 import { SubtitleBar, useSubtitleView } from "./SubtitleBar";
+import { MiniGauge } from "./MiniGauge";
+import { groupProgress, type GroupProgress } from "@/lib/group-progress";
 
 type Bar = { t: TaskRow; start: string; end: string };
 type RowItem =
   | { kind: "task"; key: string; bar: Bar }
-  | { kind: "group"; key: string; subtitle: string; label: string; start: string | null; end: string | null; total: number; done: number; dated: number };
+  | { kind: "group"; key: string; subtitle: string; label: string; progress: GroupProgress; start: string | null; end: string | null; total: number; done: number; dated: number };
 
 const ROW = 46;
 const HEAD = 36;
@@ -26,8 +28,8 @@ function weekStart(s: string) {
   return addDays(s, -dow);
 }
 
-export function Gantt({ tasks, deps, milestones }: {
-  tasks: TaskRow[]; deps: { taskId: string; dependsOnId: string }[]; milestones: { title: string; date: string }[];
+export function Gantt({ tasks, allTasks, deps, milestones }: {
+  tasks: TaskRow[]; allTasks?: TaskRow[]; deps: { taskId: string; dependsOnId: string }[]; milestones: { title: string; date: string }[];
 }) {
   const [scale, setScale] = useState<"week" | "day">("week");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,12 +62,12 @@ export function Gantt({ tasks, deps, milestones }: {
       const gb = bars.filter((b) => ids.has(b.t.id));
       const start = gb.length ? gb.reduce((a, b) => (a < b.start ? a : b.start), gb[0].start) : null;
       const end = gb.length ? gb.reduce((a, b) => (a > b.end ? a : b.end), gb[0].end) : null;
-      const done = g.tasks.filter((t) => t.status === "done").length;
-      out.push({ kind: "group", key: `g:${g.subtitle}`, subtitle: g.subtitle, label: g.label, start, end, total: g.tasks.length, done, dated: gb.length });
+      const progress = groupProgress(g.tasks, allTasks ?? tasks);
+      out.push({ kind: "group", key: `g:${g.subtitle}`, subtitle: g.subtitle, label: g.label, start, end, total: g.tasks.length, done: progress.done, dated: gb.length, progress });
       if (!collapsed[g.subtitle]) for (const b of gb) out.push({ kind: "task", key: b.t.id, bar: b });
     }
     return out;
-  }, [view, visibleGroups, bars, collapsed]);
+  }, [view, visibleGroups, bars, collapsed, allTasks, tasks]);
   const visibleBars = items.flatMap((r) => (r.kind === "task" ? [r.bar] : []));
   const shownUndated = view === "all" ? undated : undated.filter((t) => visibleGroups.some((g) => g.tasks.includes(t)));
 
@@ -131,7 +133,7 @@ export function Gantt({ tasks, deps, milestones }: {
       <div className="mb-3"><SubtitleBar sv={sv} count={view === "all" ? bars.length : items.reduce((n, r) => n + (r.kind === "group" ? r.dated : 0), 0)} unit="일정 있는 태스크" /></div>
       <div ref={containerRef} className="card relative overflow-x-auto">
         <div ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 flex w-max flex-col items-start text-[13.5px] font-medium leading-5">
-          {items.map((r) => <span key={r.key} className="whitespace-pre">{r.kind === "task" ? r.bar.t.title : `▸ ${r.label} 00개 · 완료 00`}</span>)}
+          {items.map((r) => <span key={r.key} className="whitespace-pre">{r.kind === "task" ? r.bar.t.title : `▸ ${r.label} ████████ 100% 지연 00`}</span>)}
         </div>
         <div className="flex" style={{ minWidth: labelWidth + 240 }}>
           {/* 왼쪽 태스크 이름 */}
@@ -142,8 +144,8 @@ export function Gantt({ tasks, deps, milestones }: {
                 onClick={() => setCollapsed((c) => ({ ...c, [r.subtitle]: !c[r.subtitle] }))}
                 className="flex w-full items-center gap-2 border-b border-line bg-brand-50 px-3 py-2 text-left text-[13px] font-semibold text-brand" style={{ minHeight: GROUP_ROW }}>
                 <ChevronRight size={14} className={clsx("shrink-0 transition-transform", !collapsed[r.subtitle] && "rotate-90")} />
-                <span className="min-w-0 break-words">{r.label}</span>
-                <span className="shrink-0 text-[11.5px] font-normal">{r.total}개 · 완료 {r.done}</span>
+                <span className="min-w-0 flex-1 break-words">{r.label}</span>
+                <MiniGauge p={r.progress} compact />
               </button>
             ) : (
               <button key={r.key} data-row-key={r.key} onClick={() => openTask(r.bar.t.id)} title={r.bar.t.title}
@@ -183,9 +185,9 @@ export function Gantt({ tasks, deps, milestones }: {
                   if (!r.start || !r.end) return <span key={r.key} className="absolute text-[11.5px] text-faint" style={{ left: 8, top: rowCenter(i) - 8 }}>일정 없음</span>;
                   const left = x(r.start);
                   const w = Math.max(px, x(r.end) - left + px);
-                  const p = r.total ? r.done / r.total : 0;
+                  const p = r.progress.percent / 100;
                   return (
-                    <div key={r.key} title={`${r.label} ${fmtShort(r.start)}~${fmtShort(r.end)} · 완료 ${r.done}/${r.total}`}
+                    <div key={r.key} title={`${r.label} ${fmtShort(r.start)}~${fmtShort(r.end)} · 진척도 ${r.progress.percent}% · 완료 ${r.done}/${r.total}`}
                       className="absolute overflow-hidden rounded-full border border-brand/40 bg-white" style={{ left, width: w, top: rowCenter(i) - 6, height: 12 }}>
                       <span className="absolute inset-y-0 left-0 bg-brand" style={{ width: `${p * 100}%` }} />
                     </div>

@@ -104,7 +104,7 @@ export default async function ProjectPage({ params, searchParams }: {
         <CategoryProvider value={{ projectId: id, categories: categoryRows, allSubtitles, editable }}>
         {tab === "table" && <TaskTable projectId={id} tasks={filtered} users={activeUsers} editable={editable} />}
         {tab === "kanban" && <Kanban projectId={id} tasks={filtered.filter((t) => !t.parentId)} allTasks={tasks} users={activeUsers} editable={editable} />}
-        {tab === "gantt" && <Gantt tasks={filtered.filter((t) => !t.parentId)} deps={deps} milestones={milestones.map((m) => ({ title: m.title, date: m.date }))} />}
+        {tab === "gantt" && <Gantt tasks={filtered.filter((t) => !t.parentId)} allTasks={tasks} deps={deps} milestones={milestones.map((m) => ({ title: m.title, date: m.date }))} />}
         </CategoryProvider>
         {tab === "meetings" && <ProjectMeetings key={selectedMeeting?.meeting.id ?? "none"} projectId={id} meetings={meetings} selected={selectedMeeting} users={activeUsers} editable={editable} />}
         {tab === "dashboard" && <ProjectDashboard tasks={tasks} users={activeUsers} />}

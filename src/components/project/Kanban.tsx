@@ -11,6 +11,8 @@ import { STATUSES, STATUS_LABEL, STATUS_STYLE, fmtShort, todayStr, type Status }
 import { useOpenTask } from "./cells";
 import { NewTaskModal } from "./ProjectHeader";
 import { SubtitleBar, useSubtitleView } from "./SubtitleBar";
+import { MiniGauge } from "./MiniGauge";
+import { groupProgress } from "@/lib/group-progress";
 
 /** 소제목 레인의 드롭 영역 id = "소제목␀상태" */
 const LANE_SEP = "\u0000";
@@ -60,7 +62,6 @@ export function Kanban({ projectId, tasks, allTasks, users, editable }: {
           {visibleGroups.length === 0 && <Empty>표시할 태스크가 없습니다.</Empty>}
           {visibleGroups.map((g) => {
             const isCollapsed = collapsed[g.subtitle] === true;
-            const done = g.tasks.filter((t) => t.status === "done").length;
             return (
               <section key={g.subtitle} aria-label={`${g.label} 레인`} className="min-w-[960px] rounded-xl border border-line">
                 <h3>
@@ -68,8 +69,9 @@ export function Kanban({ projectId, tasks, allTasks, users, editable }: {
                     onClick={() => setCollapsed((c) => ({ ...c, [g.subtitle]: !isCollapsed }))}
                     className={clsx("flex w-full items-center gap-2 bg-brand-50 px-4 py-2.5 text-left text-[13.5px] font-semibold text-brand", isCollapsed ? "rounded-xl" : "rounded-t-xl")}>
                     <ChevronRight size={15} className={clsx("shrink-0 transition-transform", !isCollapsed && "rotate-90")} />
-                    {g.label}
-                    <span className="text-[12px] font-normal">{g.tasks.length}개 · 완료 {done}</span>
+                    <span className="min-w-0 truncate">{g.label}</span>
+                    <span className="shrink-0 text-[12px] font-normal">{g.tasks.length}개</span>
+                    <span className="ml-3"><MiniGauge p={groupProgress(g.tasks, allTasks)} /></span>
                     {isCollapsed && (
                       <span className="ml-auto flex gap-1.5">
                         {STATUSES.map((s) => {
