@@ -115,7 +115,7 @@ export async function taskDetail(taskId: string) {
 }
 export type TaskDetail = NonNullable<Awaited<ReturnType<typeof taskDetail>>>;
 
-export async function boardPosts(limit = 30) {
+export async function boardPosts(limit = 30, onlyNotices = false, offset = 0) {
   const posts = await db.select({
     id: schema.posts.id, content: schema.posts.content, isNotice: schema.posts.isNotice, createdAt: schema.posts.createdAt,
     userId: schema.posts.userId, userName: schema.users.name, userColor: schema.users.color,
@@ -123,7 +123,8 @@ export async function boardPosts(limit = 30) {
   }).from(schema.posts)
     .leftJoin(schema.users, eq(schema.users.id, schema.posts.userId))
     .leftJoin(schema.files, eq(schema.files.id, schema.posts.fileId))
-    .orderBy(desc(schema.posts.isNotice), desc(schema.posts.createdAt)).limit(limit);
+    .where(onlyNotices ? eq(schema.posts.isNotice, true) : undefined)
+    .orderBy(desc(schema.posts.isNotice), desc(schema.posts.createdAt), desc(schema.posts.id)).limit(limit).offset(offset);
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
   const replies = await db.select({
@@ -166,3 +167,8 @@ export async function meetingDetail(id: string) {
   return { meeting: { ...safe, createdAt: m.createdAt.toISOString() }, tasks, project: project ?? null };
 }
 export type MeetingDetail = NonNullable<Awaited<ReturnType<typeof meetingDetail>>>;
+
+export async function countNotices(): Promise<number> {
+ const [row]=await db.select({count:sql<number>`count(*)::int`}).from(schema.posts).where(eq(schema.posts.isNotice,true));
+ return row?.count??0;
+}

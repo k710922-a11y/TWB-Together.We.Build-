@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { canEdit, requireUser } from "@/lib/auth";
-import { dueSoonTasks, listMeetings, listProjects, listUsers, myOpenTasks } from "@/lib/queries";
+import { boardPosts, countNotices, dueSoonTasks, listMeetings, listProjects, listUsers, myOpenTasks } from "@/lib/queries";
 import { TaskListRows } from "@/components/pages/TaskListRows";
 import { Empty } from "@/components/ui";
 import { DeleteProjectButton } from "@/components/pages/DeleteProjectButton";
 import { RenameProjectButton } from "@/components/project/RenameProject";
 import { fmtKoDate } from "@/lib/format";
 import { geminiReady } from "@/lib/gemini";
+import { NoticeBoard } from "@/components/pages/NoticeBoard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "홈" };
 
 export default async function Home() {
   const me = await requireUser();
-  const [projects, mine, soon, users, meetings] = await Promise.all([listProjects(), myOpenTasks(me.id), dueSoonTasks(7), listUsers(), listMeetings()]);
+  const [projects, mine, soon, users, meetings, notices, noticeCount] = await Promise.all([listProjects(), myOpenTasks(me.id), dueSoonTasks(7), listUsers(), listMeetings(), boardPosts(5, true), countNotices()]);
   return (
     <div className="space-y-6 px-5 py-7 lg:px-8">
       <div>
@@ -25,6 +26,8 @@ export default async function Home() {
           미팅 녹음 정리(Gemini)가 아직 꺼져 있습니다. Vercel 프로젝트 환경 변수에 <b>GEMINI_API_KEY</b>를 넣으면 켜집니다. (aistudio.google.com/apikey 에서 무료 발급)
         </div>
       )}
+
+      <NoticeBoard me={me} posts={notices} total={noticeCount} compact />
 
       <section>
         <div className="mb-2.5 flex items-center justify-between"><h2 className="text-[16px] font-bold">프로젝트 진척도</h2><Link href="/projects" className="text-[13px] text-brand">전체 보기</Link></div>

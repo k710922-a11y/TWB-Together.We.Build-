@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { Heart, Paperclip, Trash2 } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth";
 import type { BoardPost } from "@/lib/queries";
-import { createPost, deletePost, replyPost, toggleLike } from "@/app/actions/board";
+import { createPost, deletePost, replyPost, toggleLike, setPostNotice } from "@/app/actions/board";
 import { Avatar, downloadFile, uploadFile, useAction, useToast } from "@/components/ui";
 import { fmtStamp } from "@/lib/format";
 
@@ -67,7 +67,7 @@ export function MiniBoard({ me, posts }: { me: CurrentUser; posts: BoardPost[] }
 function PostCard({ p, me }: { p: BoardPost; me: CurrentUser }) {
   const [reply, setReply] = useState("");
   const [open, setOpen] = useState(false);
-  const { exec } = useAction();
+  const { exec, pending } = useAction();
   const toast = useToast();
   const liked = p.likes.includes(me.id);
   return (
@@ -90,7 +90,8 @@ function PostCard({ p, me }: { p: BoardPost; me: CurrentUser }) {
         <button onClick={() => exec(() => toggleLike(p.id))} className={clsx("flex items-center gap-0.5 hover:text-ink", liked && "text-pri-high")}>
           <Heart size={11} fill={liked ? "currentColor" : "none"} /> {p.likes.length}
         </button>
-        {(p.userId === me.id || me.role === "admin") && (
+        {me.role === "admin" && <button disabled={pending} onClick={() => exec(() => setPostNotice(p.id, !p.isNotice), { ok: p.isNotice ? "공지를 해제했습니다." : "홈 공지로 고정했습니다." })} className="hover:text-brand">{p.isNotice ? "공지 해제" : "공지로 고정"}</button>}
+        {((!p.isNotice && p.userId === me.id) || me.role === "admin") && (
           <button onClick={() => confirm("이 글을 삭제할까요?") && exec(() => deletePost(p.id))} className="ml-auto hover:text-pri-high"><Trash2 size={11} /></button>
         )}
       </div>
